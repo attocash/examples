@@ -1,0 +1,42 @@
+services:
+  node-mysql:
+    image: "mysql:8.0"
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: "node"
+      MYSQL_ROOT_PASSWORD: "root"
+    volumes:
+      - node_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  node:
+    image: "ghcr.io/attocash/node:dev"
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "8082:8082"
+    environment:
+      ATTO_PUBLIC_URI: "ws://{external-ip}:8082"
+      ATTO_DB_HOST: "node-mysql"
+      ATTO_DB_NAME: "node"
+      ATTO_DB_USER: "root"
+      ATTO_DB_PASSWORD: "root"
+      LOGGING_LEVEL_CASH_ATTO_NODE_NETWORK: "INFO"
+      LOGGING_LEVEL_CASH_ATTO_NODE_ELECTION: "INFO"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/health" ]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    depends_on:
+      - node-mysql
+    restart: unless-stopped
+
+volumes:
+  node_mysql_data:
